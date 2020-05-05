@@ -9,7 +9,9 @@ def  get_lawlist():
     r = requests.get('https://elaws.e-gov.go.jp/api/1/lawlists/1')
     root = ET.fromstring(r.text)
     tree = ET.ElementTree(element=root)
-    tree.write('lawlist.xml', encoding='utf-8', xml_declaration=True)
+    if not os.path.exists('laws/'):
+        os.mkdir('laws')
+    tree.write('laws/lawlist.xml', encoding='utf-8', xml_declaration=True)
     return
 
 # 法令名一覧から特定の法律をキーワードで検索した上で法令の正式名称と法令番号を返す関数
@@ -1116,6 +1118,7 @@ def xml_to_tex(Law_Name):
 
 
 def main():
+    get_lawlist()
     Law_Name = search_get_LawContent()
     result = xml_to_tex(Law_Name)
     return result
