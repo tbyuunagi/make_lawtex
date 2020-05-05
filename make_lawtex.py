@@ -75,7 +75,7 @@ def xml_to_tex(Law_Name):
         return None
     tree = ET.parse('laws/' + Law_Name + '.xml')
     root = tree.getroot()
-    with open('laws/' + Law_Name + '.tex', 'w') as f:
+    with open('laws/' + Law_Name + '.tex', 'w', encoding='utf-8') as f:
         f.write('\\documentclass[twocolumn,a4j,10pt]{ltjtarticle}\n\\title{' + Law_Name + '}\n\\author{}\n\\date{}\n\\renewcommand{\\baselinestretch}{0.8}\n\\setlength{\columnseprule}{.4pt}\n\\usepackage{enumitem}\n\\setlist[description]{topsep=3pt,parsep=0pt,partopsep=0pt,itemsep=3pt,leftmargin=10pt,labelsep=5pt,labelsep=10pt}\n\\makeatletter\n\\newcommand{\\subsubsubsection}{\\@startsection{paragraph}{4}{\\z@}%\n  {1.0\\Cvs \\@plus.5\\Cdp \\@minus.2\\Cdp}%\n  {.1\\Cvs \\@plus.3\\Cdp}%\n  {\\reset@font\\sffamily\\normalsize}\n}\n\\makeatother\n\\setcounter{secnumdepth}{4}\n\\begin{document}\n\\maketitle\n\\tableofcontents\n')
 
         
