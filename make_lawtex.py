@@ -1,7 +1,7 @@
-# coding: UTF-8
 import requests
 import os
 import xml.etree.ElementTree as ET
+import re
 
 # egovのxmlの構造はPart：編、Chapter：章、Section：節、Subsection：款、Subsubsection：目、Article：条、Paragraph：項、Item：号、Subitem:イロハ
 
@@ -69,6 +69,11 @@ def search_get_LawContent():
     get_Content = get_LawContent(get_Result)
     return get_Content
 
+def delete_ruby(text):
+    text = re.sub('\\<Rt\\>.+?\\<\\/Rt\\>','',text)
+    text = re.sub('\\<Ruby\\>','',text)
+    text = re.sub('\\<\\/Ruby\\>','',text)
+    return text
 
 # xmlをtexの形式にする。単純化の余地がある。
 def xml_to_tex(Law_Name):
@@ -76,70 +81,72 @@ def xml_to_tex(Law_Name):
         return None
     tree = ET.parse('laws/' + Law_Name + '.xml')
     root = tree.getroot()
-    with open('laws/' + Law_Name + '.tex', 'w', encoding='utf-8') as f:
-        f.write('\\documentclass[twocolumn,a4j,10pt]{ltjtarticle}\n\\title{' + Law_Name + '}\n\\author{}\n\\date{}\n\\renewcommand{\\baselinestretch}{0.8}\n\\setlength{\columnseprule}{.4pt}\n\\usepackage{enumitem}\n\\setlist[description]{topsep=3pt,parsep=0pt,partopsep=0pt,itemsep=3pt,leftmargin=10pt,labelsep=5pt,labelsep=10pt}\n\\makeatletter\n\\newcommand{\\subsubsubsection}{\\@startsection{paragraph}{4}{\\z@}%\n  {1.0\\Cvs \\@plus.5\\Cdp \\@minus.2\\Cdp}%\n  {.1\\Cvs \\@plus.3\\Cdp}%\n  {\\reset@font\\sffamily\\normalsize}\n}\n\\makeatother\n\\setcounter{secnumdepth}{4}\n\\begin{document}\n\\maketitle\n\\tableofcontents\n')
+    with open('laws/' + Law_Name + '.tex', 'w') as f:
+        f.write('\\documentclass[twocolumn,a4j,10pt]{ltjtarticle}\n\\title{' + delete_ruby(Law_Name) + '}\n\\author{}\n\\date{}\n\\renewcommand{\\baselinestretch}{0.8}\n\\setlength{\columnseprule}{.4pt}\n\\usepackage{enumitem}\n\\setlist[description]{topsep=3pt,parsep=0pt,partopsep=0pt,itemsep=3pt,leftmargin=10pt,labelsep=5pt,labelsep=10pt}\n\\makeatletter\n\\newcommand{\\subsubsubsection}{\\@startsection{paragraph}{4}{\\z@}%\n  {1.0\\Cvs \\@plus.5\\Cdp \\@minus.2\\Cdp}%\n  {.1\\Cvs \\@plus.3\\Cdp}%\n  {\\reset@font\\sffamily\\normalsize}\n}\n\\makeatother\n\\setcounter{secnumdepth}{4}\n\\begin{document}\n\\maketitle\n\\tableofcontents\n')
 
         
         if root.find('.//MainProvision').find('.//Part') != None:
             for Part in root.find('.//MainProvision').iter('Part'):
                 for i in Part.find('PartTitle').itertext():
-                    f.write('\\part*{' + i + '}\n\\addcontentsline{toc}{part}{' + i + '}\n')
+                    f.write('\\part*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{part}{' + delete_ruby(i) + '}\n')
     
                 if Part.find('.//Chapter') != None:
                     for Chapter in Part.findall('Chapter'):
                         for i in Chapter.find('ChapterTitle').itertext():
-                            f.write('\\section*{' + i + '}\n\\addcontentsline{toc}{section}{' + i + '}\n')
+                            f.write('\\section*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{section}{' + delete_ruby(i) + '}\n')
                             
                         if Chapter.find('.//Section') != None:
                             for Section in Chapter.findall('Section'):
                                 for i in Section.find('SectionTitle').itertext():
-                                    f.write('\\subsection*{' + i + '}\n\\addcontentsline{toc}{subsection}{' + i + '}\n')
+                                    f.write('\\subsection*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{subsection}{' + delete_ruby(i) + '}\n')
                                     
                                 if Section.find('.//Subsection') != None:
                                     for Subsection in Section.findall('Subsection'):
                                         for i in Subsection.find('SubsectionTitle').itertext():
-                                            f.write('\\subsubsection*{' + i + '}\n\\addcontentsline{toc}{subsubsection}{' + i + '}\n')
+                                            f.write('\\subsubsection*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{subsubsection}{' + delete_ruby(i) + '}\n')
                                             
                                         if Subsection.find('.//Division') != None:
                                             for Division in Subsection.findall('Division'):
                                                 for i in Division.find('DivisionTitle').itertext():
-                                                    f.write('\\subsubsubsection*{' + i + '}\n{' + i + '}\n')
+                                                    f.write('\\subsubsubsection*{' + delete_ruby(i) + '}\n{' + delete_ruby(i) + '}\n')
                                                     
                                                     for Article in Division.findall('Article'):
                                                         if Article.find('ArticleCaption') != None:
+                                                            a = ""
                                                             for i in Article.find('ArticleCaption').itertext():
-                                                                f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                                                a += delete_ruby(i)
+                                                            f.write('\\noindent\\hspace{10pt}' + a + '\n')
                         
                                                         para = 1
                                                         for Paragraph in Article.findall('Paragraph'):
                                                             if len(Article.findall('Paragraph')) > 1:
                                                                 if para == 1:
-                                                                    f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                                    f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                                     para += 1
                                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                         break
                                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                         break
                                                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Paragraph.find('.//Item') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Item in Paragraph.findall('.//Item'):
-                                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                             if Item.find('.//Subitem1') != None:
                                                                                 f.write('\\begin{description}\n')
                                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                         break
                                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                        f.write(i)
+                                                                                        f.write(delete_ruby(i))
                                                                                     f.write('\n')
                                                                                 f.write('\\end{description}\n')
                                                                         f.write('\\end{description}\n')
@@ -151,54 +158,54 @@ def xml_to_tex(Law_Name):
                                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                         break
                                                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Paragraph.find('.//Item') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Item in Paragraph.findall('.//Item'):
-                                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                             if Item.find('.//Subitem1') != None:
                                                                                 f.write('\\begin{description}\n')
                                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                         break
                                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                        f.write(i)
+                                                                                        f.write(delete_ruby(i))
                                                                                     f.write('\n')
                                                                                 f.write('\\end{description}\n')
                                                                         f.write('\\end{description}\n')
                                                             else:
-                                                                f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                                f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                                 if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                         break
                                                                 if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                     break
                                                                 for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                    f.write(i)
+                                                                    f.write(delete_ruby(i))
                                                                 f.write('\n')
                                                                 if Paragraph.find('.//Item') != None:
                                                                     f.write('\\begin{description}\n')
                                                                     for Item in Paragraph.findall('.//Item'):
-                                                                        f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                        f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                         if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                             break
                                                                         for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                            f.write(i)
+                                                                            f.write(delete_ruby(i))
                                                                         f.write('\n')
                                                                         if Item.find('.//Subitem1') != None:
                                                                             f.write('\\begin{description}\n')
                                                                             for Subitem1 in Item.findall('.//Subitem1'):
-                                                                                f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                                f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                                 if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                     break
                                                                                 for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                    f.write(i)
+                                                                                    f.write(delete_ruby(i))
                                                                                 f.write('\n')
                                                                             f.write('\\end{description}\n')
                                                                     f.write('\\end{description}\n')
@@ -206,21 +213,23 @@ def xml_to_tex(Law_Name):
                                         else:
                                             for Article in Subsection.findall('Article'):
                                                 if Article.find('ArticleCaption') != None:
+                                                    a = ""
                                                     for i in Article.find('ArticleCaption').itertext():
-                                                        f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                                        a += delete_ruby(i)
+                                                    f.write('\\noindent\\hspace{10pt}' + a + '\n')
                             
                                                 para = 1
                                                 for Paragraph in Article.findall('Paragraph'):
                                                     if len(Article.findall('Paragraph')) > 1:
                                                         if para == 1:
-                                                            f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                            f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                             para += 1
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                 break
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                 break
                                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Paragraph.find('.//Item') != None:
                                                                 f.write('\\begin{description}\n')
@@ -229,16 +238,16 @@ def xml_to_tex(Law_Name):
                                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Item.find('.//Subitem1') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                         f.write('\\end{description}\n')
                                                                 f.write('\\end{description}\n')
@@ -250,54 +259,54 @@ def xml_to_tex(Law_Name):
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                 break
                                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Paragraph.find('.//Item') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Item in Paragraph.findall('.//Item'):
-                                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Item.find('.//Subitem1') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                         f.write('\\end{description}\n')
                                                                 f.write('\\end{description}\n')
                                                     else:
-                                                        f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                        f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                         if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                 break
                                                         if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                             break
                                                         for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                         if Paragraph.find('.//Item') != None:
                                                             f.write('\\begin{description}\n')
                                                             for Item in Paragraph.findall('.//Item'):
-                                                                f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                 if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                     break
                                                                 for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                    f.write(i)
+                                                                    f.write(delete_ruby(i))
                                                                 f.write('\n')
                                                                 if Item.find('.//Subitem1') != None:
                                                                     f.write('\\begin{description}\n')
                                                                     for Subitem1 in Item.findall('.//Subitem1'):
-                                                                        f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                        f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                         if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                             break
                                                                         for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                            f.write(i)
+                                                                            f.write(delete_ruby(i))
                                                                         f.write('\n')
                                                                     f.write('\\end{description}\n')
                                                             f.write('\\end{description}\n')
@@ -305,39 +314,41 @@ def xml_to_tex(Law_Name):
                                 else:
                                     for Article in Section.findall('Article'):
                                         if Article.find('ArticleCaption') != None:
+                                            a = ""
                                             for i in Article.find('ArticleCaption').itertext():
-                                                f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                                a += delete_ruby(i)
+                                            f.write('\\noindent\\hspace{10pt}' + a + '\n')
                         
                                         para = 1
                                         for Paragraph in Article.findall('Paragraph'):
                                             if len(Article.findall('Paragraph')) > 1:
                                                 if para == 1:
-                                                    f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                    f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                     para += 1
                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                         break
                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                         break
                                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Paragraph.find('.//Item') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Item in Paragraph.findall('.//Item'):
-                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Item.find('.//Subitem1') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                 f.write('\\end{description}\n')
                                                         f.write('\\end{description}\n')
@@ -349,54 +360,54 @@ def xml_to_tex(Law_Name):
                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                         break
                                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Paragraph.find('.//Item') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Item in Paragraph.findall('.//Item'):
-                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Item.find('.//Subitem1') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                 f.write('\\end{description}\n')
                                                         f.write('\\end{description}\n')
                                             else:
-                                                f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                 if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                         break
                                                 if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                     break
                                                 for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                                 if Paragraph.find('.//Item') != None:
                                                     f.write('\\begin{description}\n')
                                                     for Item in Paragraph.findall('.//Item'):
-                                                        f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                        f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                         if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                             break
                                                         for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                         if Item.find('.//Subitem1') != None:
                                                             f.write('\\begin{description}\n')
                                                             for Subitem1 in Item.findall('.//Subitem1'):
-                                                                f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                 if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                     break
                                                                 for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                    f.write(i)
+                                                                    f.write(delete_ruby(i))
                                                                 f.write('\n')
                                                             f.write('\\end{description}\n')
                                                     f.write('\\end{description}\n')
@@ -404,39 +415,41 @@ def xml_to_tex(Law_Name):
                         else:
                             for Article in Chapter.findall('Article'):
                                 if Article.find('ArticleCaption') != None:
+                                    a = ""
                                     for i in Article.find('ArticleCaption').itertext():
-                                        f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                        a += delete_ruby(i)
+                                    f.write('\\noindent\\hspace{10pt}' + a + '\n')
     
                                 para = 1
                                 for Paragraph in Article.findall('Paragraph'):
                                     if len(Article.findall('Paragraph')) > 1:
                                         if para == 1:
-                                            f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                            f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                             para += 1
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                 break
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                 break
                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Paragraph.find('.//Item') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Item in Paragraph.findall('.//Item'):
-                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Item.find('.//Subitem1') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                         f.write('\\end{description}\n')
                                                 f.write('\\end{description}\n')
@@ -448,54 +461,54 @@ def xml_to_tex(Law_Name):
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                 break
                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Paragraph.find('.//Item') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Item in Paragraph.findall('.//Item'):
-                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Item.find('.//Subitem1') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                         f.write('\\end{description}\n')
                                                 f.write('\\end{description}\n')
                                     else:
-                                        f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                        f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                         if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                             break
                                         if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                             break
                                         for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                            f.write(i)
+                                            f.write(delete_ruby(i))
                                         f.write('\n')
                                         if Paragraph.find('.//Item') != None:
                                             f.write('\\begin{description}\n')
                                             for Item in Paragraph.findall('.//Item'):
-                                                f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                 if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                     break
                                                 for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                                 if Item.find('.//Subitem1') != None:
                                                     f.write('\\begin{description}\n')
                                                     for Subitem1 in Item.findall('.//Subitem1'):
-                                                        f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                        f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                         if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                             break
                                                         for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                     f.write('\\end{description}\n')
                                             f.write('\\end{description}\n')
@@ -504,39 +517,41 @@ def xml_to_tex(Law_Name):
                 else:
                     for Article in Part.findall('Article'):
                         if Article.find('ArticleCaption') != None:
+                            a = ""
                             for i in Article.find('ArticleCaption').itertext():
-                                f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                a+=delete_ruby(i)
+                            f.write('\\noindent\\hspace{10pt}' + a + '\n')
     
                         para = 1
                         for Paragraph in Article.findall('Paragraph'):
                             if len(Article.findall('Paragraph')) > 1:
                                 if para == 1:
-                                    f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                    f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                     para += 1
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                         break
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                         break
                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Paragraph.find('.//Item') != None:
                                         f.write('\\begin{description}\n')
                                         for Item in Paragraph.findall('.//Item'):
-                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                 break
                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Item.find('.//Subitem1') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                 f.write('\\end{description}\n')
                                         f.write('\\end{description}\n')
@@ -548,54 +563,54 @@ def xml_to_tex(Law_Name):
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                         break
                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Paragraph.find('.//Item') != None:
                                         f.write('\\begin{description}\n')
                                         for Item in Paragraph.findall('.//Item'):
-                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                 break
                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Item.find('.//Subitem1') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                 f.write('\\end{description}\n')
                                         f.write('\\end{description}\n')
                             else:
-                                f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                 if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                     break
                                 if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                     break
                                 for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                    f.write(i)
+                                    f.write(delete_ruby(i))
                                 f.write('\n')
                                 if Paragraph.find('.//Item') != None:
                                     f.write('\\begin{description}\n')
                                     for Item in Paragraph.findall('.//Item'):
-                                        f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                        f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                         if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                             break
                                         for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                            f.write(i)
+                                            f.write(delete_ruby(i))
                                         f.write('\n')
                                         if Item.find('.//Subitem1') != None:
                                             f.write('\\begin{description}\n')
                                             for Subitem1 in Item.findall('.//Subitem1'):
-                                                f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                 if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                     break
                                                 for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                             f.write('\\end{description}\n')
                                     f.write('\\end{description}\n')
@@ -603,58 +618,60 @@ def xml_to_tex(Law_Name):
         elif root.find('.//MainProvision').find('.//Chapter') != None:
             for Chapter in root.find('.//MainProvision').findall('Chapter'):
                 for i in Chapter.find('ChapterTitle').itertext():
-                    f.write('\\section*{' + i + '}\n\\addcontentsline{toc}{section}{' + i + '}\n')
+                    f.write('\\section*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{section}{' + delete_ruby(i) + '}\n')
                     
                 if Chapter.find('.//Section') != None:
                     for Section in Chapter.findall('Section'):
                         for i in Section.find('SectionTitle').itertext():
-                            f.write('\\subsection*{' + i + '}\n\\addcontentsline{toc}{subsection}{' + i + '}\n')
+                            f.write('\\subsection*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{subsection}{' + delete_ruby(i) + '}\n')
                             
                         if Section.find('.//Subsection') != None:
                             for Subsection in Section.findall('Subsection'):
                                 for i in Subsection.find('SubsectionTitle').itertext():
-                                    f.write('\\subsubsection*{' + i + '}\n\\addcontentsline{toc}{subsubsection}{' + i + '}\n')
+                                    f.write('\\subsubsection*{' + delete_ruby(i) + '}\n\\addcontentsline{toc}{subsubsection}{' + delete_ruby(i) + '}\n')
                                     
                                 if Subsection.find('.//Division') != None:
                                     for Division in Subsection.findall('Division'):
                                         for i in Division.find('DivisionTitle').itertext():
-                                            f.write('\\subsubsubsection*{' + i + '}\n{' + i + '}\n')
+                                            f.write('\\subsubsubsection*{' + delete_ruby(i) + '}\n{' + delete_ruby(i) + '}\n')
                                             
                                             for Article in Division.findall('Article'):
                                                 if Article.find('ArticleCaption') != None:
+                                                    a = ""
                                                     for i in Article.find('ArticleCaption').itertext():
-                                                        f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                                        a += delete_ruby(i)
+                                                    f.write('\\noindent\\hspace{10pt}' + a + '\n')
                 
                                                 para = 1
                                                 for Paragraph in Article.findall('Paragraph'):
                                                     if len(Article.findall('Paragraph')) > 1:
                                                         if para == 1:
-                                                            f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                            f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                             para += 1
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                 break
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                 break
                                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Paragraph.find('.//Item') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Item in Paragraph.findall('.//Item'):
-                                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Item.find('.//Subitem1') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                         f.write('\\end{description}\n')
                                                                 f.write('\\end{description}\n')
@@ -666,54 +683,54 @@ def xml_to_tex(Law_Name):
                                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                                 break
                                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Paragraph.find('.//Item') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Item in Paragraph.findall('.//Item'):
-                                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                     if Item.find('.//Subitem1') != None:
                                                                         f.write('\\begin{description}\n')
                                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                                 break
                                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                                f.write(i)
+                                                                                f.write(delete_ruby(i))
                                                                             f.write('\n')
                                                                         f.write('\\end{description}\n')
                                                                 f.write('\\end{description}\n')
                                                     else:
-                                                        f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                        f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                         if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                                 break
                                                         if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                             break
                                                         for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                         if Paragraph.find('.//Item') != None:
                                                             f.write('\\begin{description}\n')
                                                             for Item in Paragraph.findall('.//Item'):
-                                                                f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                                f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                                 if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                     break
                                                                 for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                    f.write(i)
+                                                                    f.write(delete_ruby(i))
                                                                 f.write('\n')
                                                                 if Item.find('.//Subitem1') != None:
                                                                     f.write('\\begin{description}\n')
                                                                     for Subitem1 in Item.findall('.//Subitem1'):
-                                                                        f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                        f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                         if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                             break
                                                                         for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                            f.write(i)
+                                                                            f.write(delete_ruby(i))
                                                                         f.write('\n')
                                                                     f.write('\\end{description}\n')
                                                             f.write('\\end{description}\n')
@@ -721,14 +738,16 @@ def xml_to_tex(Law_Name):
                                 else:
                                     for Article in Subsection.findall('Article'):
                                         if Article.find('ArticleCaption') != None:
+                                            a = ""
                                             for i in Article.find('ArticleCaption').itertext():
-                                                f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                                a += delete_ruby(i)
+                                            f.write('\\noindent\\hspace{10pt}' + a + '\n')
                     
                                         para = 1
                                         for Paragraph in Article.findall('Paragraph'):
                                             if len(Article.findall('Paragraph')) > 1:
                                                 if para == 1:
-                                                    f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                                    f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                                     para += 1
                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                         break
@@ -740,20 +759,20 @@ def xml_to_tex(Law_Name):
                                                     if Paragraph.find('.//Item') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Item in Paragraph.findall('.//Item'):
-                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Item.find('.//Subitem1') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                 f.write('\\end{description}\n')
                                                         f.write('\\end{description}\n')
@@ -765,25 +784,25 @@ def xml_to_tex(Law_Name):
                                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                         break
                                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Paragraph.find('.//Item') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Item in Paragraph.findall('.//Item'):
-                                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                             if Item.find('.//Subitem1') != None:
                                                                 f.write('\\begin{description}\n')
                                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                         break
                                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                        f.write(i)
+                                                                        f.write(delete_ruby(i))
                                                                     f.write('\n')
                                                                 f.write('\\end{description}\n')
                                                         f.write('\\end{description}\n')
@@ -794,25 +813,25 @@ def xml_to_tex(Law_Name):
                                                 if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                     break
                                                 for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                                 if Paragraph.find('.//Item') != None:
                                                     f.write('\\begin{description}\n')
                                                     for Item in Paragraph.findall('.//Item'):
-                                                        f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                        f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                         if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                             break
                                                         for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                         if Item.find('.//Subitem1') != None:
                                                             f.write('\\begin{description}\n')
                                                             for Subitem1 in Item.findall('.//Subitem1'):
-                                                                f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                                f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                                 if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                     break
                                                                 for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                    f.write(i)
+                                                                    f.write(delete_ruby(i))
                                                                 f.write('\n')
                                                             f.write('\\end{description}\n')
                                                     f.write('\\end{description}\n')
@@ -820,39 +839,41 @@ def xml_to_tex(Law_Name):
                         else:
                             for Article in Section.findall('Article'):
                                 if Article.find('ArticleCaption') != None:
+                                    a = ""
                                     for i in Article.find('ArticleCaption').itertext():
-                                        f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                        a += delete_ruby(i)
+                                    f.write('\\noindent\\hspace{10pt}' + a + '\n')
                 
                                 para = 1
                                 for Paragraph in Article.findall('Paragraph'):
                                     if len(Article.findall('Paragraph')) > 1:
                                         if para == 1:
-                                            f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                            f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                             para += 1
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                 break
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                 break
                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Paragraph.find('.//Item') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Item in Paragraph.findall('.//Item'):
-                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Item.find('.//Subitem1') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                         f.write('\\end{description}\n')
                                                 f.write('\\end{description}\n')
@@ -864,54 +885,54 @@ def xml_to_tex(Law_Name):
                                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                                 break
                                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Paragraph.find('.//Item') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Item in Paragraph.findall('.//Item'):
-                                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                     if Item.find('.//Subitem1') != None:
                                                         f.write('\\begin{description}\n')
                                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                                 break
                                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                                f.write(i)
+                                                                f.write(delete_ruby(i))
                                                             f.write('\n')
                                                         f.write('\\end{description}\n')
                                                 f.write('\\end{description}\n')
                                     else:
-                                        f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                        f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                         if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                                 break
                                         if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                             break
                                         for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                            f.write(i)
+                                            f.write(delete_ruby(i))
                                         f.write('\n')
                                         if Paragraph.find('.//Item') != None:
                                             f.write('\\begin{description}\n')
                                             for Item in Paragraph.findall('.//Item'):
-                                                f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                                f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                                 if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                     break
                                                 for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                                 if Item.find('.//Subitem1') != None:
                                                     f.write('\\begin{description}\n')
                                                     for Subitem1 in Item.findall('.//Subitem1'):
-                                                        f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                        f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                         if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                             break
                                                         for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                            f.write(i)
+                                                            f.write(delete_ruby(i))
                                                         f.write('\n')
                                                     f.write('\\end{description}\n')
                                             f.write('\\end{description}\n')
@@ -919,39 +940,41 @@ def xml_to_tex(Law_Name):
                 else:
                     for Article in Chapter.findall('Article'):
                         if Article.find('ArticleCaption') != None:
+                            a = ""
                             for i in Article.find('ArticleCaption').itertext():
-                                f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                                a += delete_ruby(i)
+                                f.write('\\noindent\\hspace{10pt}' + a + '\n')
     
                         para = 1
                         for Paragraph in Article.findall('Paragraph'):
                             if len(Article.findall('Paragraph')) > 1:
                                 if para == 1:
-                                    f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                    f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                     para += 1
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                         break
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                         break
                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Paragraph.find('.//Item') != None:
                                         f.write('\\begin{description}\n')
                                         for Item in Paragraph.findall('.//Item'):
-                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                 break
                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Item.find('.//Subitem1') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                 f.write('\\end{description}\n')
                                         f.write('\\end{description}\n')
@@ -963,54 +986,54 @@ def xml_to_tex(Law_Name):
                                     if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                         break
                                     for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Paragraph.find('.//Item') != None:
                                         f.write('\\begin{description}\n')
                                         for Item in Paragraph.findall('.//Item'):
-                                            f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                            f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                             if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                                 break
                                             for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                             if Item.find('.//Subitem1') != None:
                                                 f.write('\\begin{description}\n')
                                                 for Subitem1 in Item.findall('.//Subitem1'):
-                                                    f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                    f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                     if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                         break
                                                     for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                        f.write(i)
+                                                        f.write(delete_ruby(i))
                                                     f.write('\n')
                                                 f.write('\\end{description}\n')
                                         f.write('\\end{description}\n')
                             else:
-                                f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                                f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                                 if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                     break
                                 if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                     break
                                 for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                    f.write(i)
+                                    f.write(delete_ruby(i))
                                 f.write('\n')
                                 if Paragraph.find('.//Item') != None:
                                     f.write('\\begin{description}\n')
                                     for Item in Paragraph.findall('.//Item'):
-                                        f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                        f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                         if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                             break
                                         for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                            f.write(i)
+                                            f.write(delete_ruby(i))
                                         f.write('\n')
                                         if Item.find('.//Subitem1') != None:
                                             f.write('\\begin{description}\n')
                                             for Subitem1 in Item.findall('.//Subitem1'):
-                                                f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                                f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                                 if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                     break
                                                 for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                    f.write(i)
+                                                    f.write(delete_ruby(i))
                                                 f.write('\n')
                                             f.write('\\end{description}\n')
                                     f.write('\\end{description}\n')
@@ -1018,39 +1041,41 @@ def xml_to_tex(Law_Name):
         else:
             for Article in root.find('.//MainProvision').iter('Article'):
                 if Article.find('ArticleCaption') != None:
+                    a = ""
                     for i in Article.find('ArticleCaption').itertext():
-                        f.write('\\noindent\\hspace{10pt}' + i + '\n')
+                        a += delete_ruby(i)
+                    f.write('\\noindent\\hspace{10pt}' + a + '\n')
             
                 para = 1
                 for Paragraph in Article.findall('Paragraph'):
                     if len(Article.findall('Paragraph')) > 1:
                         if para == 1:
-                            f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                            f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                             para += 1
                             if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                 break
                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                 break
                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                f.write(i)
+                                f.write(delete_ruby(i))
                             f.write('\n')
                             if Paragraph.find('.//Item') != None:
                                 f.write('\\begin{description}\n')
                                 for Item in Paragraph.findall('.//Item'):
-                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                         break
                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Item.find('.//Subitem1') != None:
                                         f.write('\\begin{description}\n')
                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                 break
                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                         f.write('\\end{description}\n')
                                 f.write('\\end{description}\n')
@@ -1062,54 +1087,54 @@ def xml_to_tex(Law_Name):
                             if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                                 break
                             for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                                f.write(i)
+                                f.write(delete_ruby(i))
                             f.write('\n')
                             if Paragraph.find('.//Item') != None:
                                 f.write('\\begin{description}\n')
                                 for Item in Paragraph.findall('.//Item'):
-                                    f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                    f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                     if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                         break
                                     for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                        f.write(i)
+                                        f.write(delete_ruby(i))
                                     f.write('\n')
                                     if Item.find('.//Subitem1') != None:
                                         f.write('\\begin{description}\n')
                                         for Subitem1 in Item.findall('.//Subitem1'):
-                                            f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                            f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                             if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                                 break
                                             for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                                f.write(i)
+                                                f.write(delete_ruby(i))
                                             f.write('\n')
                                         f.write('\\end{description}\n')
                                 f.write('\\end{description}\n')
                     else:
-                        f.write('\\begin{description}\n\\item[' + Article.find('ArticleTitle').text + ']')
+                        f.write('\\begin{description}\n\\item[' + delete_ruby(Article.find('ArticleTitle').text) + ']')
                         if Paragraph.find('ParagraphSentence').find('.//Sentence') == None:
                                 break
                         if Paragraph.find('ParagraphSentence').find('.//Sentence').text == None:
                             break
                         for i in Paragraph.find('ParagraphSentence').find('.//Sentence').itertext():
-                            f.write(i)
+                            f.write(delete_ruby(i))
                         f.write('\n')
                         if Paragraph.find('.//Item') != None:
                             f.write('\\begin{description}\n')
                             for Item in Paragraph.findall('.//Item'):
-                                f.write('\item[' + Item.find('.//ItemTitle').text + ']')
+                                f.write('\item[' + delete_ruby(Item.find('.//ItemTitle').text) + ']')
                                 if Item.find('.//ItemSentence').find('.//Sentence') == None:
                                     break
                                 for i in Item.find('.//ItemSentence').find('.//Sentence').itertext():
-                                    f.write(i)
+                                    f.write(delete_ruby(i))
                                 f.write('\n')
                                 if Item.find('.//Subitem1') != None:
                                     f.write('\\begin{description}\n')
                                     for Subitem1 in Item.findall('.//Subitem1'):
-                                        f.write('\item[' + Subitem1.find('Subitem1Title').text + ']')
+                                        f.write('\item[' + delete_ruby(Subitem1.find('Subitem1Title').text) + ']')
                                         if Subitem1.find('.//Subitem1Sentence').find('.//Sentence') == None:
                                             break
                                         for i in Subitem1.find('.//Subitem1Sentence').find('.//Sentence').itertext():
-                                            f.write(i)
+                                            f.write(delete_ruby(i))
                                         f.write('\n')
                                     f.write('\\end{description}\n')
                             f.write('\\end{description}\n')
