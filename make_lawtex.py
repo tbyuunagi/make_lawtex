@@ -23,9 +23,9 @@ def search_Laws(key):
     LawNo_list = []
     for child in root[1]:
         if child.tag != 'Category':
-            if key in child[0].text:
-                LawName_list.append(child[0].text)
-                LawNo_list.append(child[1].text)
+            if key in child[1].text:
+                LawName_list.append(child[1].text)
+                LawNo_list.append(child[2].text)
     return LawName_list, LawNo_list
 
 # 入出力
